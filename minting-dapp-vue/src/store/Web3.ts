@@ -115,6 +115,7 @@ export const useWeb3 = defineStore('Web3', {
     },
     async refreshContractState () {
       if (!this.contract) return
+      console.log('Refresh contract!')
       this.$patch({
         maxSupply: (await this.contract.maxSupply()).toNumber(),
         totalSupply: (await this.contract.totalSupply()).toNumber(),

@@ -13,6 +13,7 @@
     "@popperjs/core": "^2.11.6",
     "@typechain/hardhat": "^6.1.2",
     "bootstrap": "^5.2.1",
+    "buffer": "^6.0.3",
     "core-js": "^3.8.3",
     "ethers": "^5.7.0",
     "keccak256": "^1.0.6",
