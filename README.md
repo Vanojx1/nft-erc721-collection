@@ -1,4 +1,4 @@
-# NFT ERC721 Collection
+# NFT ERC721 Collection ( Vue 3 porting )
 
 An all-in-one solution for `ERC721` collections. Build, test and deploy your smart contract, together with a totally
 integrated DAPP within a simple yet powerful workspace.
@@ -12,7 +12,7 @@ This project was created for educational purposes, please refer to the [LICENCE]
 - automated contract verification through block explorers (e.g. Etherscan)
 - simple CLI commands that guide you through all the sale steps (whitelist, pre-sale, public sale)
 - built as a Hardhat project with TypeScript support for a better development experience
-- includes a fully-featured minting DAPP (React + TypeScript + SCSS + Webpack)
+- includes a fully-featured minting DAPP (VueCli: Vue3 + TypeScript)
 - full support for contract interaction through block explorers (e.g. Etherscan), for all the users that do not trust custom DAPPs (including the `whitelistMint(...)` function)
 - customizable minting DAPP (from basic branding to complete customization)
 - now based on `ERC721A`
