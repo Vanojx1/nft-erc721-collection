@@ -36,8 +36,50 @@
         :mintTokens="(mintAmount) => Web3.mintTokens(mintAmount)"
         :whitelistMintTokens="(mintAmount) => Web3.whitelistMintTokens(mintAmount)"
         :loading="Web3.loading"/>
-      <div v-else class="alert alert-success" role="alert">Sold Out!</div>
+      <div v-else>
+        <h2>Tokens have been <strong>sold out</strong>! <span className="emoji">🥳</span></h2>
+        You can buy from our beloved holders on <a :href="Web3.generateMarketplaceUrl" target="_blank">{{Web3.marketplaceName}}</a>.
+      </div>
     </template>
+    <div v-if="!Web3.isContractReady" className="collection-not-ready">
+      <svg className="spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      Loading collection data...
+    </div>
+    <div className="no-wallet">
+      <button v-if="!Web3.isWalletConnected" className="primary" :disabled="!Web3.provider" @click="Web3.connectWallet">Connect Wallet</button>
+
+      <div className="use-block-explorer">
+        Hey, looking for a <strong>super-safe experience</strong>? <span className="emoji">😃</span><br />
+        You can interact with the smart-contract <strong>directly</strong> through <a :href="Web3.generateContractUrl" target="_blank">{{Web3.networkConfig.blockExplorer.name}}</a>, without even connecting your wallet to this DAPP! <span className="emoji">🚀</span><br />
+        <br />
+        Keep safe! <span className="emoji">❤️</span>
+      </div>
+
+      <div v-if="!Web3.isWalletConnected || Web3.isWhitelistMintEnabled" className="merkle-proof-manual-address">
+        <h2>Whitelist Proof</h2>
+        <p>
+          Anyone can generate the proof using any public address in the list, but <strong>only the owner of that address</strong> will be able to make a successful transaction by using it.
+        </p>
+
+        <div v-if="Web3.merkleProofManualAddressStatus === true" className="feedback-message">
+          <strong>Congratulations!</strong> <span className="emoji">🎉</span><br />
+          Your Merkle Proof <strong>has been copied to the clipboard</strong>. You can paste it into <a :href="Web3.generateContractUrl" target="_blank">{{Web3.networkConfig.blockExplorer.name}}</a> to claim your tokens.
+        </div>
+        <div v-else-if="Web3.merkleProofManualAddressStatus === false" className="feedback-message">
+          The given address is not in the whitelist, please double-check.
+        </div>
+
+        <label htmlFor="merkle-proof-manual-address">Public address:</label>
+        <input id="merkle-proof-manual-address" type="text" placeholder="0x000..."
+          :disabled="Web3.userAddress"
+          :value="Web3.userAddress ?? Web3.merkleProofManualAddress"
+          @change="Web3.setMerkleProofManualAddress" />
+        <button @click="Web3.copyMerkleProofToClipboard">Generate and copy to clipboard</button>
+      </div>
+    </div>
   </div>
 </template>
 

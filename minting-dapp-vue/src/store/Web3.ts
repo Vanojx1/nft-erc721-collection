@@ -28,7 +28,7 @@ interface State {
   isWhitelistMintEnabled: boolean;
   isUserInWhitelist: boolean;
   merkleProofManualAddress: string;
-  merkleProofManualAddressFeedbackMessage: string|JSX.Element|null;
+  merkleProofManualAddressStatus: boolean|null;
   errorMessage: string|JSX.Element|null;
 }
 
@@ -47,7 +47,7 @@ const defaultState: State = {
   isWhitelistMintEnabled: false,
   isUserInWhitelist: false,
   merkleProofManualAddress: '',
-  merkleProofManualAddressFeedbackMessage: null,
+  merkleProofManualAddressStatus: null,
   errorMessage: null
 }
 
@@ -156,21 +156,16 @@ export const useWeb3 = defineStore('Web3', {
     copyMerkleProofToClipboard (): void {
       const merkleProof = Whitelist.getRawProofForAddress(this.userAddress ?? this.merkleProofManualAddress)
 
-      /* if (merkleProof.length < 1) {
-        this.merkleProofManualAddressFeedbackMessage = 'The given address is not in the whitelist, please double-check.'
+      if (merkleProof.length < 1) {
+        this.merkleProofManualAddressStatus = false
         return
-      } */
+      }
 
       navigator.clipboard.writeText(merkleProof)
-      /*
-      this.setState({
-        merkleProofManualAddressFeedbackMessage:
-        <>
-          <strong>Congratulations!</strong> <span className="emoji">🎉</span><br />
-          Your Merkle Proof <strong>has been copied to the clipboard</strong>. You can paste it into <a href={this.generateContractUrl()} target="_blank">{this.state.networkConfig.blockExplorer.name}</a> to claim your tokens.
-        </>,
-      });
-      */
+      this.merkleProofManualAddressStatus = true
+    },
+    setMerkleProofManualAddress (address: string): void {
+      this.merkleProofManualAddress = address
     }
   },
   getters: {
@@ -198,6 +193,9 @@ export const useWeb3 = defineStore('Web3', {
     },
     generateTransactionUrl (state): (arg0: any) => string {
       return (transactionHash: any) => state.networkConfig.blockExplorer.generateTransactionUrl(transactionHash)
+    },
+    marketPlaceName (): string {
+      return CollectionConfig.marketplaceConfig.name
     }
   }
 })
