@@ -4,6 +4,7 @@ import { EthereumClient, w3mConnectors, w3mProvider } from '@web3modal/ethereum'
 import { Web3Modal } from '@web3modal/html'
 import { configureChains, createConfig, getContract, prepareWriteContract, writeContract, waitForTransaction } from '@wagmi/core'
 import { arbitrum, mainnet, polygon, hardhat } from '@wagmi/core/chains'
+import { toast } from 'vue3-toastify'
 
 import NetworkConfigInterface from '../../../smart-contract/lib/NetworkConfigInterface'
 import CollectionConfig from '../../../smart-contract/config/CollectionConfig'
@@ -181,6 +182,27 @@ export const useWeb3 = defineStore('Web3', {
       navigator.clipboard.writeText(merkleProof)
       this.merkleProofManualAddressStatus = true
     },
+    async handleTransaction (request: any) {
+      const { hash } = await writeContract(request)
+
+      toast.info(`
+        <p>Transaction sent! Please wait...</p>
+        <a href=${this.generateTransactionUrl(hash)} target="_blank" rel="noopener">View on ${this.networkConfig.blockExplorer.name}</a>
+      `, {
+        dangerouslyHTMLString: true,
+        position: 'bottom-center'
+      })
+
+      await waitForTransaction({ hash })
+
+      toast.info(`
+        <p>Success!</p>
+        <a href=${this.generateTransactionUrl(hash)} target="_blank" rel="noopener">View on ${this.networkConfig.blockExplorer.name}</a>
+      `, {
+        dangerouslyHTMLString: true,
+        position: 'bottom-center'
+      })
+    },
     async mintTokens (amount: number): Promise<void> {
       try {
         this.loading = true
@@ -191,28 +213,9 @@ export const useWeb3 = defineStore('Web3', {
           args: [BigInt(amount)],
           value
         })
-        const { hash } = await writeContract(request)
 
-        console.log('Running', hash)
+        await this.handleTransaction(request)
 
-        const data = await waitForTransaction({ hash })
-
-        console.log('Transaction', data)
-        /*
-        toast.info(<>
-          Transaction sent! Please wait...<br/>
-          <a href={this.generateTransactionUrl(transaction.hash)} target="_blank" rel="noopener">View on {this.state.networkConfig.blockExplorer.name}</a>
-        </>);
-        */
-
-        /*
-        toast.success(<>
-          Success!<br />
-          <a href={this.generateTransactionUrl(receipt.transactionHash)} target="_blank" rel="noopener">View on {this.state.networkConfig.blockExplorer.name}</a>
-        </>);
-        */
-
-        // this.refreshContractState();
         this.loading = false
       } catch (e) {
         this.setError(e)
@@ -229,28 +232,9 @@ export const useWeb3 = defineStore('Web3', {
           args: [BigInt(amount), Whitelist.getProofForAddress(this.userAddress!) as `0x${string}`[]],
           value
         })
-        const { hash } = await writeContract(request)
 
-        console.log('Running', hash)
+        await this.handleTransaction(request)
 
-        const data = await waitForTransaction({ hash })
-
-        console.log('Transaction', data)
-
-        /*
-        toast.info(<>
-          Transaction sent! Please wait...<br/>
-          <a href={this.generateTransactionUrl(transaction.hash)} target="_blank" rel="noopener">View on {this.state.networkConfig.blockExplorer.name}</a>
-        </>);
-        */
-        /*
-        toast.success(<>
-          Success!<br />
-          <a href={this.generateTransactionUrl(receipt.transactionHash)} target="_blank" rel="noopener">View on {this.state.networkConfig.blockExplorer.name}</a>
-        </>);
-        */
-
-        // this.refreshContractState();
         this.loading = false
       } catch (e) {
         this.setError(e)
