@@ -1,87 +1,65 @@
 <template>
   <div>
-    <div v-if="canMint" :class="mint-widget">
+    <div v-if="canMint" class="mint-widget">
       <div className="preview">
-        <img src="/build/images/preview.png" alt="Collection preview" />
+        <img src="../assets/logo.png" alt="Collection preview" />
       </div>
 
       <div className="price">
-        <strong>Total price:</strong> {{formattedPrice}} {{networkConfig.symbol}}
+        <strong>Total price:</strong> {{formattedPrice}} {{Web3.networkConfig.symbol}}
       </div>
 
       <div className="controls">
-        <button className="decrease" :disabled="loading">-</button>
+        <button className="decrease" @click="changeAmount(-1)" :disabled="Web3.loading">-</button>
         <span className="mint-amount">{{mintAmount}}</span>
-        <button className="increase" :disabled="loading">+</button>
-        <button className="primary" :disabled="loading">Mint</button>
+        <button className="increase" @click="changeAmount(1)" :disabled="Web3.loading">+</button>
+        <button className="primary" @click="mint" :disabled="Web3.loading || mintAmount == 0">Mint</button>
       </div>
     </div>
     <div v-else>
       <div className="cannot-mint">
         <span className="emoji">⏳</span>
-        <template v-if="!isWhitelistMintEnabled">You are not included in the <strong>whitelist</strong>.</template>
+        <template v-if="Web3.isWhitelistMintEnabled">You are not included in the <strong>whitelist</strong>.</template>
         <template v-else>The contract is <strong>paused</strong>.</template>
-        Please come back during the next sale!
+        <br/> Please come back during the next sale!
       </div>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { Options, Vue } from 'vue-class-component'
-import { utils, BigNumber } from 'ethers'
-import NetworkConfigInterface from '../../../smart-contract/lib/NetworkConfigInterface'
+import { Vue } from 'vue-class-component'
+import { utils } from 'ethers'
+import { useWeb3 } from '@/store/Web3'
 
-const props = {
-  networkConfig: null,
-  maxSupply: Number,
-  totalSupply: Number,
-  tokenPrice: BigNumber,
-  maxMintAmountPerTx: Number,
-  isPaused: Boolean,
-  loading: Boolean,
-  isWhitelistMintEnabled: Boolean,
-  isUserInWhitelist: Boolean,
-  mintTokens: null,
-  whitelistMintTokens: null
-}
-
-@Options({
-  props
-})
 export default class HelloWorld extends Vue {
-  networkConfig!: NetworkConfigInterface
-  maxSupply!: number
-  totalSupply!: number
-  tokenPrice!: BigNumber
-  maxMintAmountPerTx!: number
-  isPaused!: boolean
-  loading!: boolean
-  isWhitelistMintEnabled!: boolean
-  isUserInWhitelist!: boolean
-  mintTokens!: (mintAmount: number) => Promise<void>
-  whitelistMintTokens!: (mintAmount: number) => Promise<void>
-
+  Web3 = useWeb3()
   mintAmount = 0
 
-  private get canMint (): boolean {
-    return !this.isPaused || this.canWhitelistMint
+  get canMint (): boolean {
+    return !this.Web3.isPaused || this.canWhitelistMint
   }
 
   private get canWhitelistMint (): boolean {
-    return this.isWhitelistMintEnabled && this.isUserInWhitelist
+    return this.Web3.isWhitelistMintEnabled && this.Web3.isUserInWhitelist
   }
 
-  private get formattedPrice (): string {
-    return utils.formatEther(this.tokenPrice.mul(this.mintAmount))
+  get formattedPrice (): string {
+    return utils.formatEther(this.Web3.tokenPrice * BigInt(this.mintAmount)).toString()
   }
 
-  private async mint (): Promise<void> {
-    if (!this.isPaused) {
-      await this.mintTokens(this.mintAmount)
+  changeAmount (off: number) {
+    if (this.mintAmount + off >= 0 && this.mintAmount + off <= this.Web3.maxMintAmountPerTx) {
+      this.mintAmount += off
+    }
+  }
+
+  async mint (): Promise<void> {
+    if (!this.Web3.isPaused) {
+      await this.Web3.mintTokens(this.mintAmount)
       return
     }
-    await this.whitelistMintTokens(this.mintAmount)
+    await this.Web3.whitelistMintTokens(this.mintAmount)
   }
 }
 </script>

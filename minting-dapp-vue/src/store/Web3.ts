@@ -1,139 +1,162 @@
-import { ethers, BigNumber } from 'ethers'
 import { defineStore } from 'pinia'
-import { ExternalProvider, Web3Provider } from '@ethersproject/providers'
-import detectEthereumProvider from '@metamask/detect-provider'
+
+import { EthereumClient, w3mConnectors, w3mProvider } from '@web3modal/ethereum'
+import { Web3Modal } from '@web3modal/html'
+import { configureChains, createConfig, getContract, prepareWriteContract, writeContract, waitForTransaction } from '@wagmi/core'
+import { arbitrum, mainnet, polygon, hardhat } from '@wagmi/core/chains'
 
 import NetworkConfigInterface from '../../../smart-contract/lib/NetworkConfigInterface'
 import CollectionConfig from '../../../smart-contract/config/CollectionConfig'
-import NftContractType from '../scripts/lib/NftContractType'
 import Whitelist from '../scripts/lib/Whitelist'
 
-import { markRaw } from 'vue'
-
 // eslint-disable-next-line
-const ContractAbi = require(`../../../smart-contract/artifacts/contracts/${CollectionConfig.contractName}.sol/${CollectionConfig.contractName}.json`).abi
+// const ContractAbi = require(`../../../smart-contract/artifacts/contracts/${CollectionConfig.contractName}.sol/${CollectionConfig.contractName}.json`).abi
+import { yourNftTokenABI } from '../generated'
+
+interface Network {
+  name: string,
+  chainId: number
+}
 
 interface State {
-  contract: NftContractType|null,
-  provider: Web3Provider|null,
-  userAddress: string|null;
-  network: ethers.providers.Network|null;
+  contract: any,
+  initDone: boolean,
+  userAddress: `0x${string}`|null|undefined;
+  network: Network|null;
   networkConfig: NetworkConfigInterface;
   totalSupply: number;
   maxSupply: number;
   maxMintAmountPerTx: number;
-  tokenPrice: BigNumber;
+  tokenPrice: bigint;
   isPaused: boolean;
   loading: boolean;
   isWhitelistMintEnabled: boolean;
   isUserInWhitelist: boolean;
-  merkleProofManualAddress: string;
   merkleProofManualAddressStatus: boolean|null;
   errorMessage: string|JSX.Element|null;
 }
 
 const defaultState: State = {
   contract: null,
-  provider: null,
+  initDone: false,
   userAddress: null,
   network: null,
   networkConfig: CollectionConfig.mainnet,
   totalSupply: 0,
   maxSupply: 0,
   maxMintAmountPerTx: 0,
-  tokenPrice: BigNumber.from(0),
+  tokenPrice: BigInt(0),
   isPaused: true,
   loading: false,
   isWhitelistMintEnabled: false,
   isUserInWhitelist: false,
-  merkleProofManualAddress: '',
   merkleProofManualAddressStatus: null,
   errorMessage: null
+}
+
+const chains = [hardhat]
+const projectId = '0d83d4f2cf23d3ecafdec74d1e273513'
+
+const { publicClient } = configureChains(chains, [w3mProvider({ projectId })])
+const wagmiConfig = createConfig({
+  autoConnect: true,
+  connectors: w3mConnectors({ projectId, chains }),
+  publicClient
+})
+const ethereumClient = new EthereumClient(wagmiConfig, chains)
+const web3modal = new Web3Modal({ projectId }, ethereumClient)
+
+const contractConf = {
+  address: CollectionConfig.contractAddress as `0x${string}`,
+  abi: yourNftTokenABI
 }
 
 export const useWeb3 = defineStore('Web3', {
   state: () => defaultState,
   actions: {
     async init () {
-      const browserProvider = await detectEthereumProvider() as ExternalProvider
-      this.provider = markRaw(new ethers.providers.Web3Provider(browserProvider))
-      this.registerWalletEvents(browserProvider)
-      await this.initWallet()
-    },
-    registerWalletEvents (browserProvider: ExternalProvider) {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      browserProvider.on('accountsChanged', () => {
-        this.initWallet()
+      console.log('Web3 init start')
+      this.registerWalletEvents()
+
+      this.contract = getContract({
+        ...contractConf,
+        walletClient: ethereumClient
       })
-
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      browserProvider.on('chainChanged', () => {
-        window.location.reload()
-      })
-    },
-    async initWallet () {
-      console.log('Init Wallet!')
-
-      const walletAccounts = await this.provider?.listAccounts()
-
-      this.$reset()
-
-      if (!walletAccounts || walletAccounts?.length === 0) return
-
-      const network = await this.provider?.getNetwork()
-      let networkConfig: NetworkConfigInterface
-      if (!network) return
-      if (network.chainId === CollectionConfig.mainnet.chainId) {
-        networkConfig = CollectionConfig.mainnet
-      } else if (network.chainId === CollectionConfig.testnet.chainId) {
-        networkConfig = CollectionConfig.testnet
-      } else {
-        this.setError('Unsupported network!')
-        return
-      }
 
       this.$patch({
-        userAddress: walletAccounts[0],
-        network: markRaw(network),
-        networkConfig
-      })
-
-      if (await this.provider?.getCode(CollectionConfig.contractAddress!) === '0x') {
-        this.setError('Could not find the contract, are you connected to the right chain?')
-        return
-      }
-
-      this.contract = markRaw(new ethers.Contract(
-        CollectionConfig.contractAddress!,
-        ContractAbi,
-        this.provider?.getSigner()
-      )) as unknown as NftContractType
-
-      this.refreshContractState()
-    },
-    async refreshContractState () {
-      if (!this.contract) return
-      console.log('Refresh contract!')
-      this.$patch({
-        maxSupply: (await this.contract.maxSupply()).toNumber(),
-        totalSupply: (await this.contract.totalSupply()).toNumber(),
-        maxMintAmountPerTx: (await this.contract.maxMintAmountPerTx()).toNumber(),
-        tokenPrice: await this.contract.cost(),
-        isPaused: await this.contract.paused(),
-        isWhitelistMintEnabled: await this.contract.whitelistMintEnabled(),
+        maxSupply: Number(await this.contract.read.maxSupply([])),
+        totalSupply: Number(await this.contract.read.totalSupply([])),
+        maxMintAmountPerTx: Number(await this.contract.read.maxMintAmountPerTx([])),
+        tokenPrice: await this.contract.read.cost([]),
+        isPaused: await this.contract.read.paused([]),
+        isWhitelistMintEnabled: await this.contract.read.whitelistMintEnabled([]),
         isUserInWhitelist: Whitelist.contains(this.userAddress ?? '')
       })
+
+      this.initDone = true
+    },
+    async registerWalletEvents () {
+      ethereumClient.watchAccount(({ isConnected, address }) => {
+        // console.log('ACCOUNT EVENT', isConnected, address)
+        if (isConnected) {
+          this.userAddress = address
+        } else {
+          this.userAddress = null
+        }
+      })
+      ethereumClient.watchNetwork(({ chain }) => {
+        // console.log('NET EV', chain)
+        if (chain) {
+          this.network = {
+            name: chain.name,
+            chainId: chain.id
+          }
+        } else {
+          this.network = null
+        }
+      })
+
+      /*
+      const config = {
+        contracts: [{
+          ...contractConf,
+          functionName: 'mint',
+          args: []
+        }, {
+          ...contractConf,
+          functionName: 'whitelistMint',
+          args: []
+        }, {
+          ...contractConf,
+          functionName: 'setWhitelistMintEnabled',
+          args: []
+        }]
+      }
+
+      await multicall(config)
+      const unwatch = watchMulticall(config, (data_) => {
+        console.log('SOMEONE MINTED!', data_)
+      })
+      */
     },
     setError (error: any = null) {
       let errorMessage = 'Unknown error...'
+
+      /*
+      console.log('HANDLE ERROR', typeof error, JSON.stringify(error, (key, value) =>
+        typeof value === 'bigint'
+          ? value.toString()
+          : value // return everything else unchanged
+      ))
+      */
 
       if (error === null || typeof error === 'string') {
         errorMessage = error
       } else if (typeof error === 'object') {
         // Support any type of error from the Web3 Provider...
-        if (error?.error?.message !== undefined) {
+        if (error?.details) {
+          errorMessage = error.details
+        } else if (error?.error?.message !== undefined) {
           errorMessage = error.error.message
         } else if (error?.data?.message !== undefined) {
           errorMessage = error.data.message
@@ -145,16 +168,10 @@ export const useWeb3 = defineStore('Web3', {
       this.errorMessage = errorMessage === null ? null : errorMessage.charAt(0).toUpperCase() + errorMessage.slice(1)
     },
     async connectWallet () {
-      try {
-        await this.provider?.provider?.request!({ method: 'eth_requestAccounts' })
-
-        this.initWallet()
-      } catch (e) {
-        this.setError(e)
-      }
+      await web3modal.openModal()
     },
-    copyMerkleProofToClipboard (): void {
-      const merkleProof = Whitelist.getRawProofForAddress(this.userAddress ?? this.merkleProofManualAddress)
+    copyMerkleProofToClipboard (merkleProofManualAddress: string): void {
+      const merkleProof = Whitelist.getRawProofForAddress(merkleProofManualAddress)
 
       if (merkleProof.length < 1) {
         this.merkleProofManualAddressStatus = false
@@ -164,25 +181,97 @@ export const useWeb3 = defineStore('Web3', {
       navigator.clipboard.writeText(merkleProof)
       this.merkleProofManualAddressStatus = true
     },
-    setMerkleProofManualAddress (address: string): void {
-      this.merkleProofManualAddress = address
+    async mintTokens (amount: number): Promise<void> {
+      try {
+        this.loading = true
+        const value = this.tokenPrice * BigInt(amount)
+        const { request } = await prepareWriteContract({
+          ...contractConf,
+          functionName: 'mint',
+          args: [BigInt(amount)],
+          value
+        })
+        const { hash } = await writeContract(request)
+
+        console.log('Running', hash)
+
+        const data = await waitForTransaction({ hash })
+
+        console.log('Transaction', data)
+        /*
+        toast.info(<>
+          Transaction sent! Please wait...<br/>
+          <a href={this.generateTransactionUrl(transaction.hash)} target="_blank" rel="noopener">View on {this.state.networkConfig.blockExplorer.name}</a>
+        </>);
+        */
+
+        /*
+        toast.success(<>
+          Success!<br />
+          <a href={this.generateTransactionUrl(receipt.transactionHash)} target="_blank" rel="noopener">View on {this.state.networkConfig.blockExplorer.name}</a>
+        </>);
+        */
+
+        // this.refreshContractState();
+        this.loading = false
+      } catch (e) {
+        this.setError(e)
+        this.loading = false
+      }
+    },
+    async whitelistMintTokens (amount: number): Promise<void> {
+      try {
+        this.loading = true
+        const value = this.tokenPrice * BigInt(amount)
+        const { request } = await prepareWriteContract({
+          ...contractConf,
+          functionName: 'whitelistMint',
+          args: [BigInt(amount), Whitelist.getProofForAddress(this.userAddress!) as `0x${string}`[]],
+          value
+        })
+        const { hash } = await writeContract(request)
+
+        console.log('Running', hash)
+
+        const data = await waitForTransaction({ hash })
+
+        console.log('Transaction', data)
+
+        /*
+        toast.info(<>
+          Transaction sent! Please wait...<br/>
+          <a href={this.generateTransactionUrl(transaction.hash)} target="_blank" rel="noopener">View on {this.state.networkConfig.blockExplorer.name}</a>
+        </>);
+        */
+        /*
+        toast.success(<>
+          Success!<br />
+          <a href={this.generateTransactionUrl(receipt.transactionHash)} target="_blank" rel="noopener">View on {this.state.networkConfig.blockExplorer.name}</a>
+        </>);
+        */
+
+        // this.refreshContractState();
+        this.loading = false
+      } catch (e) {
+        this.setError(e)
+        this.loading = false
+      }
     }
   },
   getters: {
-    isMetamask (): boolean {
-      return this?.provider?.connection?.url === 'metamask'
+    getUserAddress (): `0x${string}`|null|undefined {
+      return this.userAddress
     },
     isWalletConnected (): boolean {
-      return this.userAddress !== null
+      return !!this.userAddress
     },
     isContractReady (): boolean {
-      return this.contract !== undefined
+      return this.contract !== undefined && this.initDone
     },
     isSoldOut (): boolean {
       return this.maxSupply !== 0 && this.totalSupply >= this.maxSupply
     },
     isNotMainnet (): boolean {
-      console.log('==>', this?.network?.chainId, CollectionConfig.mainnet.chainId)
       return this.network !== null && this.network.chainId !== CollectionConfig.mainnet.chainId
     },
     generateContractUrl (): string {

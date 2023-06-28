@@ -2,45 +2,29 @@
   <div className="collection-status">
     <div className="user-address">
       <span className="label">Wallet address:</span>
-      <span className="address">{{userAddress}}</span>
+      <span className="address">{{Web3.userAddress}}</span>
     </div>
     <div className="supply">
       <span className="label">Supply</span>
-      {{totalSupply}}/{{maxSupply}}
+      {{Web3.totalSupply}}/{{Web3.maxSupply}}
     </div>
 
     <div className="current-sale">
       <span className="label">Sale status</span>
-      {{this.isSaleOpen ? (this.isWhitelistMintEnabled ? 'Whitelist only' : 'Open') : 'Closed'}}
+      {{isSaleOpen ? (Web3.isWhitelistMintEnabled ? 'Whitelist only' : 'Open') : 'Closed'}}
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { Options, Vue } from 'vue-class-component'
+import { Vue } from 'vue-class-component'
+import { useWeb3 } from '@/store/Web3'
 
-@Options({
-  props: {
-    userAddress: String,
-    totalSupply: Number,
-    maxSupply: Number,
-    isPaused: Boolean,
-    isWhitelistMintEnabled: Boolean,
-    isUserInWhitelist: Boolean,
-    isSoldOut: Boolean
-  }
-})
 export default class HelloWorld extends Vue {
-  userAddress!: string
-  totalSupply!: number
-  maxSupply!: number
-  isPaused!: boolean
-  isWhitelistMintEnabled!: boolean
-  isUserInWhitelist!: boolean
-  isSoldOut!: boolean
+  Web3 = useWeb3()
 
-  private isSaleOpen (): boolean {
-    return (this.isWhitelistMintEnabled || !this.isPaused) && !this.isSoldOut
+  get isSaleOpen (): boolean {
+    return (this.Web3.isWhitelistMintEnabled || !this.Web3.isPaused) && !this.Web3.isSoldOut
   }
 }
 </script>
