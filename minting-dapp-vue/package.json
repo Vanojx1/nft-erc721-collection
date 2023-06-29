@@ -24,7 +24,6 @@
     "keccak256": "^1.0.6",
     "merkletreejs": "^0.2.32",
     "pinia": "^2.0.22",
-    "viem": "^1.1.8",
     "vue": "^3.2.13",
     "vue-class-component": "^8.0.0-0",
     "vue-router": "^4.0.3",

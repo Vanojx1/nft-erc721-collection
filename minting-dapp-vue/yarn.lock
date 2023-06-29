@@ -9488,7 +9488,7 @@ vary@~1.1.2:
   resolved "https://registry.npmjs.org/vary/-/vary-1.1.2.tgz#2299f02c6ded30d4a5961b0b9f74524a18f634fc"
   integrity sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==
 
-viem@^1.0.0, viem@^1.1.8:
+viem@^1.0.0:
   version "1.1.8"
   resolved "https://registry.npmjs.org/viem/-/viem-1.1.8.tgz#af5f8e2d3339be1db36405f3c0f15f5243658ce9"
   integrity sha512-sMIbBu/rKI4paCWvCxpDNAT7vO9nCtu9SKXdVk5lwMVRL/HmMFCiIBtvRO0IiqlrvZTFCWnPEMn7ndNRyb+NCQ==
