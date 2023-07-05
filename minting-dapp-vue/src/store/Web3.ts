@@ -54,7 +54,7 @@ const defaultState: State = {
   errorMessage: null
 }
 
-const projectId = '0d83d4f2cf23d3ecafdec74d1e273513'
+const projectId = CollectionConfig.walletConnectProjectId as string
 
 const { chains, publicClient, webSocketPublicClient } = configureChains(
   [polygon],
