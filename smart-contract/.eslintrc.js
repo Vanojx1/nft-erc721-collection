@@ -20,5 +20,7 @@ module.exports = {
       "error",
       { ignores: ["modules"] },
     ],
+    "node/no-missing-import": 0,
+    "linebreak-style": ["error", "unix"], // changes the file to CRLF
   },
 };

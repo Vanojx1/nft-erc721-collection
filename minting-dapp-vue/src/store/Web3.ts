@@ -1,17 +1,16 @@
 import { defineStore } from 'pinia'
 
-import { EthereumClient, w3mConnectors, w3mProvider } from '@web3modal/ethereum'
+import { EthereumClient, w3mConnectors } from '@web3modal/ethereum'
 import { Web3Modal } from '@web3modal/html'
 import { configureChains, createConfig, getContract, prepareWriteContract, writeContract, waitForTransaction } from '@wagmi/core'
-import { arbitrum, mainnet, polygon, hardhat } from '@wagmi/core/chains'
+import { polygon } from '@wagmi/core/chains'
+import { publicProvider } from '@wagmi/core/providers/public'
 import { toast } from 'vue3-toastify'
 
 import NetworkConfigInterface from '../../../smart-contract/lib/NetworkConfigInterface'
 import CollectionConfig from '../../../smart-contract/config/CollectionConfig'
 import Whitelist from '../scripts/lib/Whitelist'
 
-// eslint-disable-next-line
-// const ContractAbi = require(`../../../smart-contract/artifacts/contracts/${CollectionConfig.contractName}.sol/${CollectionConfig.contractName}.json`).abi
 import { yourNftTokenABI } from '../generated'
 
 interface Network {
@@ -55,14 +54,19 @@ const defaultState: State = {
   errorMessage: null
 }
 
-const chains = [hardhat]
 const projectId = '0d83d4f2cf23d3ecafdec74d1e273513'
 
-const { publicClient } = configureChains(chains, [w3mProvider({ projectId })])
+const { chains, publicClient, webSocketPublicClient } = configureChains(
+  [polygon],
+  [publicProvider()]
+)
+
 const wagmiConfig = createConfig({
   autoConnect: true,
   connectors: w3mConnectors({ projectId, chains }),
-  publicClient
+  // publicClient
+  publicClient,
+  webSocketPublicClient
 })
 const ethereumClient = new EthereumClient(wagmiConfig, chains)
 const web3modal = new Web3Modal({ projectId }, ethereumClient)
@@ -116,29 +120,6 @@ export const useWeb3 = defineStore('Web3', {
           this.network = null
         }
       })
-
-      /*
-      const config = {
-        contracts: [{
-          ...contractConf,
-          functionName: 'mint',
-          args: []
-        }, {
-          ...contractConf,
-          functionName: 'whitelistMint',
-          args: []
-        }, {
-          ...contractConf,
-          functionName: 'setWhitelistMintEnabled',
-          args: []
-        }]
-      }
-
-      await multicall(config)
-      const unwatch = watchMulticall(config, (data_) => {
-        console.log('SOMEONE MINTED!', data_)
-      })
-      */
     },
     setError (error: any = null) {
       let errorMessage = 'Unknown error...'
@@ -194,6 +175,8 @@ export const useWeb3 = defineStore('Web3', {
       })
 
       await waitForTransaction({ hash })
+
+      this.totalSupply = Number(await this.contract.read.totalSupply([]))
 
       toast.info(`
         <p>Success!</p>

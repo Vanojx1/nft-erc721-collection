@@ -9,8 +9,8 @@ const CollectionConfig: CollectionConfigInterface = {
   // The contract name can be updated using the following command:
   // yarn rename-contract NEW_CONTRACT_NAME
   // Please DO NOT change it manually!
-  contractName: "SuperNFT",
-  tokenName: "SuperNFT",
+  contractName: "YourNftToken",
+  tokenName: "YourNftToken",
   tokenSymbol: "SDZ",
   hiddenMetadataUri: "ipfs://__CID__/hidden.json",
   maxSupply: 6969,
@@ -26,7 +26,8 @@ const CollectionConfig: CollectionConfigInterface = {
     price: 0.0,
     maxMintAmountPerTx: 5,
   },
-  contractAddress: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  contractAddress: null,
+  walletConnectProjectId: null,
   marketplaceIdentifier: "",
   marketplaceConfig: Marketplaces.openSea,
   whitelistAddresses,
