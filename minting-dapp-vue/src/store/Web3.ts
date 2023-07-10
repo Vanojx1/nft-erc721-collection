@@ -105,6 +105,7 @@ export const useWeb3 = defineStore('Web3', {
         // console.log('ACCOUNT EVENT', isConnected, address)
         if (isConnected) {
           this.userAddress = address
+          this.isUserInWhitelist = Whitelist.contains(this.userAddress ?? '')
         } else {
           this.userAddress = null
         }
